@@ -122,16 +122,7 @@ new(InputFile) ->
 	ets:insert(mymeta, {ipv4columnsize, Ipv4columnsize}),
 	ets:insert(mymeta, {ipv6columnsize, Ipv6columnsize}).
 
-readcol(S, Dbtype, Rowoffset, Col) ->
-	case lists:nth(Dbtype, Col) of
-		0 ->
-			"This parameter is unavailable for selected data file. Please upgrade the data file.";
-		Colpos ->
-			Coloffset = (Colpos - 1) bsl 2,
-			readstr(S, readuint32(S, Rowoffset + Coloffset))
-	end.
-	
-readcol1(S, Dbtype, Rowoffset, Col) ->
+readcolcountry(S, Dbtype, Rowoffset, Col) ->
 	X = "This parameter is unavailable for selected data file. Please upgrade the data file.",
 	case lists:nth(Dbtype, Col) of
 		0 ->
@@ -144,7 +135,17 @@ readcol1(S, Dbtype, Rowoffset, Col) ->
 			{X1, X2}
 	end.
 
-readcol2(S, Dbtype, Rowoffset, Col) ->
+readcolstring(S, Dbtype, Rowoffset, Col) ->
+	case lists:nth(Dbtype, Col) of
+		0 ->
+			"This parameter is unavailable for selected data file. Please upgrade the data file.";
+		Colpos ->
+			Coloffset = (Colpos - 1) bsl 2,
+			readstr(S, readuint32(S, Rowoffset + Coloffset))
+	end.
+	
+
+readcolfloat(S, Dbtype, Rowoffset, Col) ->
 	case lists:nth(Dbtype, Col) of
 		0 ->
 			0.0;
@@ -153,7 +154,7 @@ readcol2(S, Dbtype, Rowoffset, Col) ->
 			round(readfloat(S, Rowoffset + Coloffset), 6)
 	end.
 
-readcol3(S, Dbtype, Rowoffset, Col) ->
+readcolfloatstring(S, Dbtype, Rowoffset, Col) ->
 	case lists:nth(Dbtype, Col) of
 		0 ->
 			0.0;
@@ -189,25 +190,25 @@ readrecord(S, Dbtype, Rowoffset) ->
 	Elevation_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 19, 0, 19],
 	Usagetype_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 20],
 	
-	{Country_short, Country_long} = readcol1(S, Dbtype, Rowoffset, Country_position),
-	Region = readcol(S, Dbtype, Rowoffset, Region_position),
-	City = readcol(S, Dbtype, Rowoffset, City_position),
-	Isp = readcol(S, Dbtype, Rowoffset, Isp_position),
-	Latitude = readcol2(S, Dbtype, Rowoffset, Latitude_position),
-	Longitude = readcol2(S, Dbtype, Rowoffset, Longitude_position),
-	Domain = readcol(S, Dbtype, Rowoffset, Domain_position),
-	Zipcode = readcol(S, Dbtype, Rowoffset, Zipcode_position),
-	Timezone = readcol(S, Dbtype, Rowoffset, Timezone_position),
-	Netspeed = readcol(S, Dbtype, Rowoffset, Netspeed_position),
-	Iddcode = readcol(S, Dbtype, Rowoffset, Iddcode_position),
-	Areacode = readcol(S, Dbtype, Rowoffset, Areacode_position),
-	Weatherstationcode = readcol(S, Dbtype, Rowoffset, Weatherstationcode_position),
-	Weatherstationname = readcol(S, Dbtype, Rowoffset, Weatherstationname_position),
-	Mcc = readcol(S, Dbtype, Rowoffset, Mcc_position),
-	Mnc = readcol(S, Dbtype, Rowoffset, Mnc_position),
-	Mobilebrand = readcol(S, Dbtype, Rowoffset, Mobilebrand_position),
-	Elevation = readcol3(S, Dbtype, Rowoffset, Elevation_position),
-	Usagetype = readcol(S, Dbtype, Rowoffset, Usagetype_position),
+	{Country_short, Country_long} = readcolcountry(S, Dbtype, Rowoffset, Country_position),
+	Region = readcolstring(S, Dbtype, Rowoffset, Region_position),
+	City = readcolstring(S, Dbtype, Rowoffset, City_position),
+	Isp = readcolstring(S, Dbtype, Rowoffset, Isp_position),
+	Latitude = readcolfloat(S, Dbtype, Rowoffset, Latitude_position),
+	Longitude = readcolfloat(S, Dbtype, Rowoffset, Longitude_position),
+	Domain = readcolstring(S, Dbtype, Rowoffset, Domain_position),
+	Zipcode = readcolstring(S, Dbtype, Rowoffset, Zipcode_position),
+	Timezone = readcolstring(S, Dbtype, Rowoffset, Timezone_position),
+	Netspeed = readcolstring(S, Dbtype, Rowoffset, Netspeed_position),
+	Iddcode = readcolstring(S, Dbtype, Rowoffset, Iddcode_position),
+	Areacode = readcolstring(S, Dbtype, Rowoffset, Areacode_position),
+	Weatherstationcode = readcolstring(S, Dbtype, Rowoffset, Weatherstationcode_position),
+	Weatherstationname = readcolstring(S, Dbtype, Rowoffset, Weatherstationname_position),
+	Mcc = readcolstring(S, Dbtype, Rowoffset, Mcc_position),
+	Mnc = readcolstring(S, Dbtype, Rowoffset, Mnc_position),
+	Mobilebrand = readcolstring(S, Dbtype, Rowoffset, Mobilebrand_position),
+	Elevation = readcolfloatstring(S, Dbtype, Rowoffset, Elevation_position),
+	Usagetype = readcolstring(S, Dbtype, Rowoffset, Usagetype_position),
 	
 	#ip2locationrecord{
 	country_short = Country_short,
