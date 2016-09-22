@@ -29,7 +29,9 @@ erlc test.erl
 Example
 =======
 
-See test.erl for sample usage.
+```erlang
+test:testme().
+```
 
 Dependencies
 ============
