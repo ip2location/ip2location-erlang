@@ -122,8 +122,53 @@ new(InputFile) ->
 	ets:insert(mymeta, {ipv4columnsize, Ipv4columnsize}),
 	ets:insert(mymeta, {ipv6columnsize, Ipv6columnsize}).
 
+readcol(S, Dbtype, Rowoffset, Col) ->
+	case lists:nth(Dbtype, Col) of
+		0 ->
+			"This parameter is unavailable for selected data file. Please upgrade the data file.";
+		Colpos ->
+			Coloffset = (Colpos - 1) bsl 2,
+			readstr(S, readuint32(S, Rowoffset + Coloffset))
+	end.
+	
+readcol1(S, Dbtype, Rowoffset, Col) ->
+	X = "This parameter is unavailable for selected data file. Please upgrade the data file.",
+	case lists:nth(Dbtype, Col) of
+		0 ->
+			{X, X};
+		Colpos ->
+			Coloffset = (Colpos - 1) bsl 2,
+			X0 = readuint32(S, Rowoffset + Coloffset),
+			X1 = readstr(S, X0),
+			X2 = readstr(S, X0 + 3),
+			{X1, X2}
+	end.
+
+readcol2(S, Dbtype, Rowoffset, Col) ->
+	case lists:nth(Dbtype, Col) of
+		0 ->
+			0.0;
+		Colpos ->
+			Coloffset = (Colpos - 1) bsl 2,
+			round(readfloat(S, Rowoffset + Coloffset), 6)
+	end.
+
+readcol3(S, Dbtype, Rowoffset, Col) ->
+	case lists:nth(Dbtype, Col) of
+		0 ->
+			0.0;
+		Colpos ->
+			Coloffset = (Colpos - 1) bsl 2,
+			N = readstr(S, readuint32(S, Rowoffset + Coloffset)),
+			case string:to_float(N) of
+				{error,no_float} ->
+					list_to_integer(N);
+				{F,_Rest} ->
+					F
+			end
+	end.
+
 readrecord(S, Dbtype, Rowoffset) ->
-	Not_supported = "This parameter is unavailable for selected data file. Please upgrade the data file.",
 	Country_position = [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
 	Region_position = [0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
 	City_position = [0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
@@ -144,165 +189,25 @@ readrecord(S, Dbtype, Rowoffset) ->
 	Elevation_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 19, 0, 19],
 	Usagetype_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 20],
 	
-	case lists:nth(Dbtype, Country_position) of
-		0 ->
-			Country_short = Not_supported,
-			Country_long = Not_supported;
-		Colpos ->
-			Coloffset = (Colpos - 1) bsl 2,
-			Country_short = readstr(S, readuint32(S, Rowoffset + Coloffset)),
-			Country_long = readstr(S, readuint32(S, Rowoffset + Coloffset) + 3)
-	end,
-	
-	case lists:nth(Dbtype, Region_position) of
-		0 ->
-			Region = Not_supported;
-		Colpos2 ->
-			Coloffset2 = (Colpos2 - 1) bsl 2,
-			Region = readstr(S, readuint32(S, Rowoffset + Coloffset2))
-	end,
-	
-	case lists:nth(Dbtype, City_position) of
-		0 ->
-			City = Not_supported;
-		Colpos3 ->
-			Coloffset3 = (Colpos3 - 1) bsl 2,
-			City = readstr(S, readuint32(S, Rowoffset + Coloffset3))
-	end,
-	
-	case lists:nth(Dbtype, Isp_position) of
-		0 ->
-			Isp = Not_supported;
-		Colpos4 ->
-			Coloffset4 = (Colpos4 - 1) bsl 2,
-			Isp = readstr(S, readuint32(S, Rowoffset + Coloffset4))
-	end,
-	
-	case lists:nth(Dbtype, Latitude_position) of
-		0 ->
-			Latitude = 0.0;
-		Colpos5 ->
-			Coloffset5 = (Colpos5 - 1) bsl 2,
-			Latitude = round(readfloat(S, Rowoffset + Coloffset5), 6)
-	end,
-	
-	case lists:nth(Dbtype, Longitude_position) of
-		0 ->
-			Longitude = 0.0;
-		Colpos6 ->
-			Coloffset6 = (Colpos6 - 1) bsl 2,
-			Longitude = round(readfloat(S, Rowoffset + Coloffset6), 6)
-	end,
-	
-	case lists:nth(Dbtype, Domain_position) of
-		0 ->
-			Domain = Not_supported;
-		Colpos7 ->
-			Coloffset7 = (Colpos7 - 1) bsl 2,
-			Domain = readstr(S, readuint32(S, Rowoffset + Coloffset7))
-	end,
-	
-	case lists:nth(Dbtype, Zipcode_position) of
-		0 ->
-			Zipcode = Not_supported;
-		Colpos8 ->
-			Coloffset8 = (Colpos8 - 1) bsl 2,
-			Zipcode = readstr(S, readuint32(S, Rowoffset + Coloffset8))
-	end,
-	
-	case lists:nth(Dbtype, Timezone_position) of
-		0 ->
-			Timezone = Not_supported;
-		Colpos9 ->
-			Coloffset9 = (Colpos9 - 1) bsl 2,
-			Timezone = readstr(S, readuint32(S, Rowoffset + Coloffset9))
-	end,
-	
-	case lists:nth(Dbtype, Netspeed_position) of
-		0 ->
-			Netspeed = Not_supported;
-		Colpos10 ->
-			Coloffset10 = (Colpos10 - 1) bsl 2,
-			Netspeed = readstr(S, readuint32(S, Rowoffset + Coloffset10))
-	end,
-	
-	case lists:nth(Dbtype, Iddcode_position) of
-		0 ->
-			Iddcode = Not_supported;
-		Colpos11 ->
-			Coloffset11 = (Colpos11 - 1) bsl 2,
-			Iddcode = readstr(S, readuint32(S, Rowoffset + Coloffset11))
-	end,
-	
-	case lists:nth(Dbtype, Areacode_position) of
-		0 ->
-			Areacode = Not_supported;
-		Colpos12 ->
-			Coloffset12 = (Colpos12 - 1) bsl 2,
-			Areacode = readstr(S, readuint32(S, Rowoffset + Coloffset12))
-	end,
-	
-	case lists:nth(Dbtype, Weatherstationcode_position) of
-		0 ->
-			Weatherstationcode = Not_supported;
-		Colpos13 ->
-			Coloffset13 = (Colpos13 - 1) bsl 2,
-			Weatherstationcode = readstr(S, readuint32(S, Rowoffset + Coloffset13))
-	end,
-	
-	case lists:nth(Dbtype, Weatherstationname_position) of
-		0 ->
-			Weatherstationname = Not_supported;
-		Colpos14 ->
-			Coloffset14 = (Colpos14 - 1) bsl 2,
-			Weatherstationname = readstr(S, readuint32(S, Rowoffset + Coloffset14))
-	end,
-	
-	case lists:nth(Dbtype, Mcc_position) of
-		0 ->
-			Mcc = Not_supported;
-		Colpos15 ->
-			Coloffset15 = (Colpos15 - 1) bsl 2,
-			Mcc = readstr(S, readuint32(S, Rowoffset + Coloffset15))
-	end,
-	
-	case lists:nth(Dbtype, Mnc_position) of
-		0 ->
-			Mnc = Not_supported;
-		Colpos16 ->
-			Coloffset16 = (Colpos16 - 1) bsl 2,
-			Mnc = readstr(S, readuint32(S, Rowoffset + Coloffset16))
-	end,
-	
-	case lists:nth(Dbtype, Mobilebrand_position) of
-		0 ->
-			Mobilebrand = Not_supported;
-		Colpos17 ->
-			Coloffset17 = (Colpos17 - 1) bsl 2,
-			Mobilebrand = readstr(S, readuint32(S, Rowoffset + Coloffset17))
-	end,
-	
-	case lists:nth(Dbtype, Elevation_position) of
-		0 ->
-			Elevation = Not_supported;
-		Colpos18 ->
-			Coloffset18 = (Colpos18 - 1) bsl 2,
-			N = readstr(S, readuint32(S, Rowoffset + Coloffset18)),
-			case string:to_float(N) of
-				{error,no_float} ->
-					Elevation = list_to_integer(N);
-				{F,_Rest} ->
-					Elevation = F
-			end
-	end,
-	
-	case lists:nth(Dbtype, Usagetype_position) of
-		0 ->
-			Usagetype = Not_supported;
-		Colpos19 ->
-			Coloffset19 = (Colpos19 - 1) bsl 2,
-			Usagetype = readstr(S, readuint32(S, Rowoffset + Coloffset19))
-	end,
+	{Country_short, Country_long} = readcol1(S, Dbtype, Rowoffset, Country_position),
+	Region = readcol(S, Dbtype, Rowoffset, Region_position),
+	City = readcol(S, Dbtype, Rowoffset, City_position),
+	Isp = readcol(S, Dbtype, Rowoffset, Isp_position),
+	Latitude = readcol2(S, Dbtype, Rowoffset, Latitude_position),
+	Longitude = readcol2(S, Dbtype, Rowoffset, Longitude_position),
+	Domain = readcol(S, Dbtype, Rowoffset, Domain_position),
+	Zipcode = readcol(S, Dbtype, Rowoffset, Zipcode_position),
+	Timezone = readcol(S, Dbtype, Rowoffset, Timezone_position),
+	Netspeed = readcol(S, Dbtype, Rowoffset, Netspeed_position),
+	Iddcode = readcol(S, Dbtype, Rowoffset, Iddcode_position),
+	Areacode = readcol(S, Dbtype, Rowoffset, Areacode_position),
+	Weatherstationcode = readcol(S, Dbtype, Rowoffset, Weatherstationcode_position),
+	Weatherstationname = readcol(S, Dbtype, Rowoffset, Weatherstationname_position),
+	Mcc = readcol(S, Dbtype, Rowoffset, Mcc_position),
+	Mnc = readcol(S, Dbtype, Rowoffset, Mnc_position),
+	Mobilebrand = readcol(S, Dbtype, Rowoffset, Mobilebrand_position),
+	Elevation = readcol3(S, Dbtype, Rowoffset, Elevation_position),
+	Usagetype = readcol(S, Dbtype, Rowoffset, Usagetype_position),
 	
 	#ip2locationrecord{
 	country_short = Country_short,
