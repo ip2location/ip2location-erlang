@@ -125,48 +125,48 @@ new(InputFile) ->
 readcolcountry(S, Dbtype, Rowoffset, Col) ->
 	X = "This parameter is unavailable for selected data file. Please upgrade the data file.",
 	case lists:nth(Dbtype, Col) of
-		0 ->
-			{X, X};
-		Colpos ->
-			Coloffset = (Colpos - 1) bsl 2,
-			X0 = readuint32(S, Rowoffset + Coloffset),
-			X1 = readstr(S, X0),
-			X2 = readstr(S, X0 + 3),
-			{X1, X2}
+	0 ->
+		{X, X};
+	Colpos ->
+		Coloffset = (Colpos - 1) bsl 2,
+		X0 = readuint32(S, Rowoffset + Coloffset),
+		X1 = readstr(S, X0),
+		X2 = readstr(S, X0 + 3),
+		{X1, X2}
 	end.
 
 readcolstring(S, Dbtype, Rowoffset, Col) ->
 	case lists:nth(Dbtype, Col) of
-		0 ->
-			"This parameter is unavailable for selected data file. Please upgrade the data file.";
-		Colpos ->
-			Coloffset = (Colpos - 1) bsl 2,
-			readstr(S, readuint32(S, Rowoffset + Coloffset))
+	0 ->
+		"This parameter is unavailable for selected data file. Please upgrade the data file.";
+	Colpos ->
+		Coloffset = (Colpos - 1) bsl 2,
+		readstr(S, readuint32(S, Rowoffset + Coloffset))
 	end.
 	
 
 readcolfloat(S, Dbtype, Rowoffset, Col) ->
 	case lists:nth(Dbtype, Col) of
-		0 ->
-			0.0;
-		Colpos ->
-			Coloffset = (Colpos - 1) bsl 2,
-			round(readfloat(S, Rowoffset + Coloffset), 6)
+	0 ->
+		0.0;
+	Colpos ->
+		Coloffset = (Colpos - 1) bsl 2,
+		round(readfloat(S, Rowoffset + Coloffset), 6)
 	end.
 
 readcolfloatstring(S, Dbtype, Rowoffset, Col) ->
 	case lists:nth(Dbtype, Col) of
-		0 ->
-			0.0;
-		Colpos ->
-			Coloffset = (Colpos - 1) bsl 2,
-			N = readstr(S, readuint32(S, Rowoffset + Coloffset)),
-			case string:to_float(N) of
-				{error,no_float} ->
-					list_to_integer(N);
-				{F,_Rest} ->
-					F
-			end
+	0 ->
+		0.0;
+	Colpos ->
+		Coloffset = (Colpos - 1) bsl 2,
+		N = readstr(S, readuint32(S, Rowoffset + Coloffset)),
+		case string:to_float(N) of
+		{error,no_float} ->
+			list_to_integer(N);
+		{F,_Rest} ->
+			F
+		end
 	end.
 
 readrecord(S, Dbtype, Rowoffset) ->
