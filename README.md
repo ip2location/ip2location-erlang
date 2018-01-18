@@ -39,7 +39,14 @@ Dependencies
 The complete database is available at http://www.ip2location.com under subscription package.
 
 
+IPv4 BIN vs IPv6 BIN
+======================
+Use the IPv4 BIN file if you just need to query IPv4 addresses.
+
+Use the IPv6 BIN file if you need to query BOTH IPv4 and IPv6 addresses.
+
+
 Copyright
 =========
 
-Copyright (C) 2016 by IP2Location.com, support@ip2location.com
+Copyright (C) 2018 by IP2Location.com, support@ip2location.com
