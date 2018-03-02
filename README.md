@@ -36,7 +36,7 @@ test:testme().
 Dependencies
 ============
 
-The complete database is available at http://www.ip2location.com under subscription package.
+The complete database is available at https://www.ip2location.com under subscription package.
 
 
 IPv4 BIN vs IPv6 BIN
