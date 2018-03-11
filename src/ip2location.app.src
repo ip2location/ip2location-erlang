@@ -1,0 +1,15 @@
+{application, 'ip2location',
+ [{description, "..."},
+  {vsn, "0.0.1"},
+  {contributors, ["ip2location"]},
+  {licenses, ["MIT"]},
+  {links, [{"Github", "https://github.com/ip2location/ip2location-erlang"}]},
+  {registered, []},
+  {applications,
+   [kernel,
+    stdlib
+   ]},
+  {env,[]},
+  {modules, []}
+ ]}.
+

@@ -9,8 +9,8 @@ This module can be used in many types of projects such as:
  - analyze your web server logs to determine the countries of your visitors
  - credit card fraud detection
  - software export controls
- - display native language and currency 
- - prevent password sharing and abuse of service 
+ - display native language and currency
+ - prevent password sharing and abuse of service
  - geotargeting in advertisement
 
 The database will be updated in monthly basis for the greater accuracy. Free LITE databases are available at https://lite.ip2location.com/ upon registration.
@@ -31,6 +31,19 @@ Example
 
 ```erlang
 test:testme().
+```
+
+IP2Location Elixir
+==================
+
+This Erlang module can also be included in a MixProject as follows:
+
+```elixir
+defp deps do
+  [
+    {:ip2location, github: "ip2location/ip2location-erlang"}
+  ]
+end
 ```
 
 Dependencies
