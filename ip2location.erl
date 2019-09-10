@@ -327,7 +327,7 @@ query(Ip) ->
 			[{_, Ipv4columnsize}] = ets:lookup(mymeta, ipv4columnsize),
 			[{_, Ipv6columnsize}] = ets:lookup(mymeta, ipv6columnsize),
 			
-			case inet:parse_address(Ip) of
+			Result = case inet:parse_address(Ip) of
 			{ok, {X1, X2, X3, X4}} ->
 				Ipnum = (X1 bsl 24) + (X2 bsl 16) + (X3 bsl 8) + (X4),
 				search4(S, Ipnum, Databasetype, 0, Ipv4databasecount, Ipv4databaseaddr, Ipv4indexbaseaddr, Ipv4columnsize);
@@ -346,7 +346,9 @@ query(Ip) ->
 			{_, _} ->
 				io:format("Error: Invalid IP address.~n", []),
 				{} % return empty
-			end
+			end,
+			file:close(S),
+			Result
 		end
 	end.
 
