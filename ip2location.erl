@@ -22,9 +22,10 @@
 	elevation = 0,
 	usagetype = "-"
 }).
+-define(IF(Cond), (case (Cond) of true -> (0); false -> (1) end)).
 
 apiversion() ->
-	"8.1.1".
+	"8.2.0".
 
 getapiversion() ->
 	io:format("API Version: ~p~n", [apiversion()]).
@@ -41,11 +42,18 @@ readuint(S, StartPos, Len) ->
 		binary:decode_unsigned(Data, little)
 	end.
 
+readuintrow(R, StartPos, Len) ->
+	Data = binary:part(R, StartPos, Len),
+	binary:decode_unsigned(Data, little).
+
 readuint8(S, StartPos) ->
 	readuint(S, StartPos, 1).
 
 readuint32(S, StartPos) ->
 	readuint(S, StartPos, 4).
+
+readuint32row(R, StartPos) ->
+	readuintrow(R, StartPos, 4).
 
 readuint128(S, StartPos) ->
 	readuint(S, StartPos, 16).
@@ -64,14 +72,19 @@ readstr(S, StartPos) ->
 		end
 	end.
 
-readfloat(S, StartPos) ->
-	case file:pread(S, StartPos - 1, 4) of
-	eof ->
-		ok;
-	{ok, Data} ->
-		<<F:32/float-little>> = Data,
-		F
-	end.
+% readfloat(S, StartPos) ->
+	% case file:pread(S, StartPos - 1, 4) of
+	% eof ->
+		% ok;
+	% {ok, Data} ->
+		% <<F:32/float-little>> = Data,
+		% F
+	% end.
+
+readfloatrow(R, StartPos) ->
+	Data = binary:part(R, StartPos, 4),
+	<<F:32/float-little>> = Data,
+	F.
 
 input(InputFile) ->
 	case file:open(InputFile, [read, binary, raw]) of
@@ -122,45 +135,90 @@ new(InputFile) ->
 	ets:insert(mymeta, {ipv4columnsize, Ipv4columnsize}),
 	ets:insert(mymeta, {ipv6columnsize, Ipv6columnsize}).
 
-readcolcountry(S, Dbtype, Rowoffset, Col) ->
+% readcolcountry(S, Dbtype, Rowoffset, Col) ->
+	% X = "This parameter is unavailable for selected data file. Please upgrade the data file.",
+	% case lists:nth(Dbtype, Col) of
+	% 0 ->
+		% {X, X};
+	% Colpos ->
+		% Coloffset = (Colpos - 1) bsl 2,
+		% X0 = readuint32(S, Rowoffset + Coloffset),
+		% X1 = readstr(S, X0),
+		% X2 = readstr(S, X0 + 3),
+		% {X1, X2}
+	% end.
+
+readcolcountryrow(S, R, Dbtype, Col) ->
 	X = "This parameter is unavailable for selected data file. Please upgrade the data file.",
 	case lists:nth(Dbtype, Col) of
 	0 ->
 		{X, X};
 	Colpos ->
-		Coloffset = (Colpos - 1) bsl 2,
-		X0 = readuint32(S, Rowoffset + Coloffset),
+		Coloffset = (Colpos - 2) bsl 2,
+		X0 = readuint32row(R, Coloffset),
 		X1 = readstr(S, X0),
 		X2 = readstr(S, X0 + 3),
 		{X1, X2}
 	end.
 
-readcolstring(S, Dbtype, Rowoffset, Col) ->
+% readcolstring(S, Dbtype, Rowoffset, Col) ->
+	% case lists:nth(Dbtype, Col) of
+	% 0 ->
+		% "This parameter is unavailable for selected data file. Please upgrade the data file.";
+	% Colpos ->
+		% Coloffset = (Colpos - 1) bsl 2,
+		% readstr(S, readuint32(S, Rowoffset + Coloffset))
+	% end.
+
+readcolstringrow(S, R, Dbtype, Col) ->
 	case lists:nth(Dbtype, Col) of
 	0 ->
 		"This parameter is unavailable for selected data file. Please upgrade the data file.";
 	Colpos ->
-		Coloffset = (Colpos - 1) bsl 2,
-		readstr(S, readuint32(S, Rowoffset + Coloffset))
+		Coloffset = (Colpos - 2) bsl 2,
+		readstr(S, readuint32row(R, Coloffset))
 	end.
-	
 
-readcolfloat(S, Dbtype, Rowoffset, Col) ->
+% readcolfloat(S, Dbtype, Rowoffset, Col) ->
+	% case lists:nth(Dbtype, Col) of
+	% 0 ->
+		% 0.0;
+	% Colpos ->
+		% Coloffset = (Colpos - 1) bsl 2,
+		% round(readfloat(S, Rowoffset + Coloffset), 6)
+	% end.
+
+readcolfloatrow(R, Dbtype, Col) ->
 	case lists:nth(Dbtype, Col) of
 	0 ->
 		0.0;
 	Colpos ->
-		Coloffset = (Colpos - 1) bsl 2,
-		round(readfloat(S, Rowoffset + Coloffset), 6)
+		Coloffset = (Colpos - 2) bsl 2,
+		round(readfloatrow(R, Coloffset), 6)
 	end.
 
-readcolfloatstring(S, Dbtype, Rowoffset, Col) ->
+% readcolfloatstring(S, Dbtype, Rowoffset, Col) ->
+	% case lists:nth(Dbtype, Col) of
+	% 0 ->
+		% 0.0;
+	% Colpos ->
+		% Coloffset = (Colpos - 1) bsl 2,
+		% N = readstr(S, readuint32(S, Rowoffset + Coloffset)),
+		% case string:to_float(N) of
+		% {error,no_float} ->
+			% list_to_integer(N);
+		% {F,_Rest} ->
+			% F
+		% end
+	% end.
+
+readcolfloatstringrow(S, R, Dbtype, Col) ->
 	case lists:nth(Dbtype, Col) of
 	0 ->
 		0.0;
 	Colpos ->
-		Coloffset = (Colpos - 1) bsl 2,
-		N = readstr(S, readuint32(S, Rowoffset + Coloffset)),
+		Coloffset = (Colpos - 2) bsl 2,
+		N = readstr(S, readuint32row(R, Coloffset)),
 		case string:to_float(N) of
 		{error,no_float} ->
 			list_to_integer(N);
@@ -190,48 +248,78 @@ readrecord(S, Dbtype, Rowoffset) ->
 	Elevation_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 19, 0, 19],
 	Usagetype_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 20],
 	
-	{Country_short, Country_long} = readcolcountry(S, Dbtype, Rowoffset, Country_position),
-	Region = readcolstring(S, Dbtype, Rowoffset, Region_position),
-	City = readcolstring(S, Dbtype, Rowoffset, City_position),
-	Isp = readcolstring(S, Dbtype, Rowoffset, Isp_position),
-	Latitude = readcolfloat(S, Dbtype, Rowoffset, Latitude_position),
-	Longitude = readcolfloat(S, Dbtype, Rowoffset, Longitude_position),
-	Domain = readcolstring(S, Dbtype, Rowoffset, Domain_position),
-	Zipcode = readcolstring(S, Dbtype, Rowoffset, Zipcode_position),
-	Timezone = readcolstring(S, Dbtype, Rowoffset, Timezone_position),
-	Netspeed = readcolstring(S, Dbtype, Rowoffset, Netspeed_position),
-	Iddcode = readcolstring(S, Dbtype, Rowoffset, Iddcode_position),
-	Areacode = readcolstring(S, Dbtype, Rowoffset, Areacode_position),
-	Weatherstationcode = readcolstring(S, Dbtype, Rowoffset, Weatherstationcode_position),
-	Weatherstationname = readcolstring(S, Dbtype, Rowoffset, Weatherstationname_position),
-	Mcc = readcolstring(S, Dbtype, Rowoffset, Mcc_position),
-	Mnc = readcolstring(S, Dbtype, Rowoffset, Mnc_position),
-	Mobilebrand = readcolstring(S, Dbtype, Rowoffset, Mobilebrand_position),
-	Elevation = readcolfloatstring(S, Dbtype, Rowoffset, Elevation_position),
-	Usagetype = readcolstring(S, Dbtype, Rowoffset, Usagetype_position),
+	Cols = ?IF(lists:nth(Dbtype, Country_position) == 0) + ?IF(lists:nth(Dbtype, Region_position) == 0) + ?IF(lists:nth(Dbtype, City_position) == 0) + ?IF(lists:nth(Dbtype, Isp_position) == 0) + ?IF(lists:nth(Dbtype, Latitude_position) == 0) + ?IF(lists:nth(Dbtype, Longitude_position) == 0) + ?IF(lists:nth(Dbtype, Domain_position) == 0) + ?IF(lists:nth(Dbtype, Zipcode_position) == 0) + ?IF(lists:nth(Dbtype, Timezone_position) == 0) + ?IF(lists:nth(Dbtype, Netspeed_position) == 0) + ?IF(lists:nth(Dbtype, Iddcode_position) == 0) + ?IF(lists:nth(Dbtype, Areacode_position) == 0) + ?IF(lists:nth(Dbtype, Weatherstationcode_position) == 0) + ?IF(lists:nth(Dbtype, Weatherstationname_position) == 0) + ?IF(lists:nth(Dbtype, Mcc_position) == 0) + ?IF(lists:nth(Dbtype, Mnc_position) == 0) + ?IF(lists:nth(Dbtype, Mobilebrand_position) == 0) + ?IF(lists:nth(Dbtype, Elevation_position) == 0) + ?IF(lists:nth(Dbtype, Usagetype_position) == 0),
+	Rowlength = Cols bsl 2,
 	
-	#ip2locationrecord{
-	country_short = Country_short,
-	country_long = Country_long,
-	region = Region,
-	city = City,
-	isp = Isp,
-	latitude = Latitude,
-	longitude = Longitude,
-	domain = Domain,
-	zipcode = Zipcode,
-	timezone = Timezone,
-	netspeed = Netspeed,
-	iddcode = Iddcode,
-	areacode = Areacode,
-	weatherstationcode = Weatherstationcode,
-	weatherstationname = Weatherstationname,
-	mcc = Mcc,
-	mnc = Mnc,
-	mobilebrand = Mobilebrand,
-	elevation = Elevation,
-	usagetype = Usagetype
-	}.
+	case file:pread(S, Rowoffset - 1, Rowlength) of
+		eof ->
+			#ip2locationrecord{};
+		{ok, Data} ->
+			R = Data,
+			
+			% {Country_short, Country_long} = readcolcountry(S, Dbtype, Rowoffset, Country_position),
+			% Region = readcolstring(S, Dbtype, Rowoffset, Region_position),
+			% City = readcolstring(S, Dbtype, Rowoffset, City_position),
+			% Isp = readcolstring(S, Dbtype, Rowoffset, Isp_position),
+			% Latitude = readcolfloat(S, Dbtype, Rowoffset, Latitude_position),
+			% Longitude = readcolfloat(S, Dbtype, Rowoffset, Longitude_position),
+			% Domain = readcolstring(S, Dbtype, Rowoffset, Domain_position),
+			% Zipcode = readcolstring(S, Dbtype, Rowoffset, Zipcode_position),
+			% Timezone = readcolstring(S, Dbtype, Rowoffset, Timezone_position),
+			% Netspeed = readcolstring(S, Dbtype, Rowoffset, Netspeed_position),
+			% Iddcode = readcolstring(S, Dbtype, Rowoffset, Iddcode_position),
+			% Areacode = readcolstring(S, Dbtype, Rowoffset, Areacode_position),
+			% Weatherstationcode = readcolstring(S, Dbtype, Rowoffset, Weatherstationcode_position),
+			% Weatherstationname = readcolstring(S, Dbtype, Rowoffset, Weatherstationname_position),
+			% Mcc = readcolstring(S, Dbtype, Rowoffset, Mcc_position),
+			% Mnc = readcolstring(S, Dbtype, Rowoffset, Mnc_position),
+			% Mobilebrand = readcolstring(S, Dbtype, Rowoffset, Mobilebrand_position),
+			% Elevation = readcolfloatstring(S, Dbtype, Rowoffset, Elevation_position),
+			% Usagetype = readcolstring(S, Dbtype, Rowoffset, Usagetype_position),
+			
+			{Country_short, Country_long} = readcolcountryrow(S, R, Dbtype, Country_position),
+			Region = readcolstringrow(S, R, Dbtype, Region_position),
+			City = readcolstringrow(S, R, Dbtype, City_position),
+			Isp = readcolstringrow(S, R, Dbtype, Isp_position),
+			Latitude = readcolfloatrow(R, Dbtype, Latitude_position),
+			Longitude = readcolfloatrow(R, Dbtype, Longitude_position),
+			Domain = readcolstringrow(S, R, Dbtype, Domain_position),
+			Zipcode = readcolstringrow(S, R, Dbtype, Zipcode_position),
+			Timezone = readcolstringrow(S, R, Dbtype, Timezone_position),
+			Netspeed = readcolstringrow(S, R, Dbtype, Netspeed_position),
+			Iddcode = readcolstringrow(S, R, Dbtype, Iddcode_position),
+			Areacode = readcolstringrow(S, R, Dbtype, Areacode_position),
+			Weatherstationcode = readcolstringrow(S, R, Dbtype, Weatherstationcode_position),
+			Weatherstationname = readcolstringrow(S, R, Dbtype, Weatherstationname_position),
+			Mcc = readcolstringrow(S, R, Dbtype, Mcc_position),
+			Mnc = readcolstringrow(S, R, Dbtype, Mnc_position),
+			Mobilebrand = readcolstringrow(S, R, Dbtype, Mobilebrand_position),
+			Elevation = readcolfloatstringrow(S, R, Dbtype, Elevation_position),
+			Usagetype = readcolstringrow(S, R, Dbtype, Usagetype_position),
+			
+			#ip2locationrecord{
+			country_short = Country_short,
+			country_long = Country_long,
+			region = Region,
+			city = City,
+			isp = Isp,
+			latitude = Latitude,
+			longitude = Longitude,
+			domain = Domain,
+			zipcode = Zipcode,
+			timezone = Timezone,
+			netspeed = Netspeed,
+			iddcode = Iddcode,
+			areacode = Areacode,
+			weatherstationcode = Weatherstationcode,
+			weatherstationname = Weatherstationname,
+			mcc = Mcc,
+			mnc = Mnc,
+			mobilebrand = Mobilebrand,
+			elevation = Elevation,
+			usagetype = Usagetype
+			}
+	end.
 
 searchtree(S, Ipnum, Dbtype, Low, High, BaseAddr, Colsize, Iptype) ->
 	if
@@ -253,9 +341,11 @@ searchtree(S, Ipnum, Dbtype, Low, High, BaseAddr, Colsize, Iptype) ->
 				Ipnum >= Ipfrom andalso Ipnum < Ipto ->
 					if
 						Iptype == ipv4 ->
-							readrecord(S, Dbtype + 1, Rowoffset);
+							% readrecord(S, Dbtype + 1, Rowoffset);
+							readrecord(S, Dbtype + 1, Rowoffset + 4);
 						true ->
-							readrecord(S, Dbtype + 1, Rowoffset + 12)
+							% readrecord(S, Dbtype + 1, Rowoffset + 12)
+							readrecord(S, Dbtype + 1, Rowoffset + 16)
 					end;
 				true ->
 					if
