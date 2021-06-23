@@ -20,12 +20,14 @@
 	mnc = "-",
 	mobilebrand = "-",
 	elevation = 0,
-	usagetype = "-"
+	usagetype = "-",
+	addresstype = "-",
+	category = "-"
 }).
 -define(IF(Cond), (case (Cond) of true -> (0); false -> (1) end)).
 
 apiversion() ->
-	"8.2.0".
+	"8.3.0".
 
 getapiversion() ->
 	io:format("API Version: ~p~n", [apiversion()]).
@@ -72,15 +74,6 @@ readstr(S, StartPos) ->
 		end
 	end.
 
-% readfloat(S, StartPos) ->
-	% case file:pread(S, StartPos - 1, 4) of
-	% eof ->
-		% ok;
-	% {ok, Data} ->
-		% <<F:32/float-little>> = Data,
-		% F
-	% end.
-
 readfloatrow(R, StartPos) ->
 	Data = binary:part(R, StartPos, 4),
 	<<F:32/float-little>> = Data,
@@ -99,7 +92,7 @@ new(InputFile) ->
 	S = input(InputFile),
 	Databasetype = readuint8(S, 1),
 	Databasecolumn = readuint8(S, 2),
-	% Databaseyear = readuint8(S, 3),
+	Databaseyear = readuint8(S, 3),
 	% Databasemonth = readuint8(S, 4),
 	% Databaseday = readuint8(S, 5),
 	Ipv4databasecount = readuint32(S, 6),
@@ -108,46 +101,39 @@ new(InputFile) ->
 	Ipv6databaseaddr = readuint32(S, 18),
 	Ipv4indexbaseaddr = readuint32(S, 22),
 	Ipv6indexbaseaddr = readuint32(S, 26),
+	Productcode = readuint8(S, 30),
 	Ipv4columnsize = Databasecolumn bsl 2, % 4 bytes each column
 	Ipv6columnsize = 16 + ((Databasecolumn - 1) bsl 2), % 4 bytes each column, except IPFrom column which is 16 bytes
+	% Producttype = readuint8(S, 31),
+	% Filesize = readuint32(S, 32),
 	file:close(S),
 	
-	case ets:info(mymeta) of
-	undefined ->
-		ets:new(mymeta, [set, named_table]);
-	_ ->
-		ok % do nothing
-	end,
+	if
+		% check if is correct BIN (should be 1 for IP2Location BIN file), also checking for zipped file (PK being the first 2 chars)
+		(Productcode /= 1 andalso Databaseyear >= 21) orelse (Databasetype == 80 andalso Databasecolumn == 75) ->
+			io:format("Incorrect IP2Location BIN file format. Please make sure that you are using the latest IP2Location BIN file.~n", []),
+			halt();
+		true ->
+			case ets:info(mymeta) of
+				undefined ->
+					ets:new(mymeta, [set, named_table]),
+					ets:insert(mymeta, {inputfile, InputFile}),
+					ets:insert(mymeta, {databasetype, Databasetype}),
+					ets:insert(mymeta, {databasetype, Databasetype}),
+					ets:insert(mymeta, {databasecolumn, Databasecolumn}),
+					ets:insert(mymeta, {ipv4databasecount, Ipv4databasecount}),
+					ets:insert(mymeta, {ipv4databaseaddr, Ipv4databaseaddr}),
+					ets:insert(mymeta, {ipv6databasecount, Ipv6databasecount}),
+					ets:insert(mymeta, {ipv6databaseaddr, Ipv6databaseaddr}),
+					ets:insert(mymeta, {ipv4indexbaseaddr, Ipv4indexbaseaddr}),
+					ets:insert(mymeta, {ipv6indexbaseaddr, Ipv6indexbaseaddr}),
+					ets:insert(mymeta, {ipv4columnsize, Ipv4columnsize}),
+					ets:insert(mymeta, {ipv6columnsize, Ipv6columnsize});
+				_ ->
+					ok % do nothing
+			end
+	end.
 	
-	ets:insert(mymeta, {inputfile, InputFile}),
-	ets:insert(mymeta, {databasetype, Databasetype}),
-	ets:insert(mymeta, {databasetype, Databasetype}),
-	ets:insert(mymeta, {databasecolumn, Databasecolumn}),
-	% ets:insert(mymeta, {databaseyear, Databaseyear}),
-	% ets:insert(mymeta, {databasemonth, Databasemonth}),
-	% ets:insert(mymeta, {databaseday, Databaseday}),
-	ets:insert(mymeta, {ipv4databasecount, Ipv4databasecount}),
-	ets:insert(mymeta, {ipv4databaseaddr, Ipv4databaseaddr}),
-	ets:insert(mymeta, {ipv6databasecount, Ipv6databasecount}),
-	ets:insert(mymeta, {ipv6databaseaddr, Ipv6databaseaddr}),
-	ets:insert(mymeta, {ipv4indexbaseaddr, Ipv4indexbaseaddr}),
-	ets:insert(mymeta, {ipv6indexbaseaddr, Ipv6indexbaseaddr}),
-	ets:insert(mymeta, {ipv4columnsize, Ipv4columnsize}),
-	ets:insert(mymeta, {ipv6columnsize, Ipv6columnsize}).
-
-% readcolcountry(S, Dbtype, Rowoffset, Col) ->
-	% X = "This parameter is unavailable for selected data file. Please upgrade the data file.",
-	% case lists:nth(Dbtype, Col) of
-	% 0 ->
-		% {X, X};
-	% Colpos ->
-		% Coloffset = (Colpos - 1) bsl 2,
-		% X0 = readuint32(S, Rowoffset + Coloffset),
-		% X1 = readstr(S, X0),
-		% X2 = readstr(S, X0 + 3),
-		% {X1, X2}
-	% end.
-
 readcolcountryrow(S, R, Dbtype, Col) ->
 	X = "This parameter is unavailable for selected data file. Please upgrade the data file.",
 	case lists:nth(Dbtype, Col) of
@@ -161,15 +147,6 @@ readcolcountryrow(S, R, Dbtype, Col) ->
 		{X1, X2}
 	end.
 
-% readcolstring(S, Dbtype, Rowoffset, Col) ->
-	% case lists:nth(Dbtype, Col) of
-	% 0 ->
-		% "This parameter is unavailable for selected data file. Please upgrade the data file.";
-	% Colpos ->
-		% Coloffset = (Colpos - 1) bsl 2,
-		% readstr(S, readuint32(S, Rowoffset + Coloffset))
-	% end.
-
 readcolstringrow(S, R, Dbtype, Col) ->
 	case lists:nth(Dbtype, Col) of
 	0 ->
@@ -179,15 +156,6 @@ readcolstringrow(S, R, Dbtype, Col) ->
 		readstr(S, readuint32row(R, Coloffset))
 	end.
 
-% readcolfloat(S, Dbtype, Rowoffset, Col) ->
-	% case lists:nth(Dbtype, Col) of
-	% 0 ->
-		% 0.0;
-	% Colpos ->
-		% Coloffset = (Colpos - 1) bsl 2,
-		% round(readfloat(S, Rowoffset + Coloffset), 6)
-	% end.
-
 readcolfloatrow(R, Dbtype, Col) ->
 	case lists:nth(Dbtype, Col) of
 	0 ->
@@ -196,21 +164,6 @@ readcolfloatrow(R, Dbtype, Col) ->
 		Coloffset = (Colpos - 2) bsl 2,
 		round(readfloatrow(R, Coloffset), 6)
 	end.
-
-% readcolfloatstring(S, Dbtype, Rowoffset, Col) ->
-	% case lists:nth(Dbtype, Col) of
-	% 0 ->
-		% 0.0;
-	% Colpos ->
-		% Coloffset = (Colpos - 1) bsl 2,
-		% N = readstr(S, readuint32(S, Rowoffset + Coloffset)),
-		% case string:to_float(N) of
-		% {error,no_float} ->
-			% list_to_integer(N);
-		% {F,_Rest} ->
-			% F
-		% end
-	% end.
 
 readcolfloatstringrow(S, R, Dbtype, Col) ->
 	case lists:nth(Dbtype, Col) of
@@ -228,27 +181,29 @@ readcolfloatstringrow(S, R, Dbtype, Col) ->
 	end.
 
 readrecord(S, Dbtype, Rowoffset) ->
-	Country_position = [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-	Region_position = [0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
-	City_position = [0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
-	Isp_position = [0, 0, 3, 0, 5, 0, 7, 5, 7, 0, 8, 0, 9, 0, 9, 0, 9, 0, 9, 7, 9, 0, 9, 7, 9],
-	Latitude_position = [0, 0, 0, 0, 0, 5, 5, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
-	Longitude_position = [0, 0, 0, 0, 0, 6, 6, 0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6],
-	Domain_position = [0, 0, 0, 0, 0, 0, 0, 6, 8, 0, 9, 0, 10,0, 10, 0, 10, 0, 10, 8, 10, 0, 10, 8, 10],
-	Zipcode_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 7, 7, 7, 0, 7, 7, 7, 0, 7, 0, 7, 7, 7, 0, 7],
-	Timezone_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 8, 7, 8, 8, 8, 7, 8, 0, 8, 8, 8, 0, 8],
-	Netspeed_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 11,0, 11,8, 11, 0, 11, 0, 11, 0, 11],
-	Iddcode_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 12, 0, 12, 0, 12, 9, 12, 0, 12],
-	Areacode_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10 ,13 ,0, 13, 0, 13, 10, 13, 0, 13],
-	Weatherstationcode_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 14, 0, 14, 0, 14, 0, 14],
-	Weatherstationname_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 15, 0, 15, 0, 15, 0, 15],
-	Mcc_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 16, 0, 16, 9, 16],
-	Mnc_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10,17, 0, 17, 10, 17],
-	Mobilebrand_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11,18, 0, 18, 11, 18],
-	Elevation_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 19, 0, 19],
-	Usagetype_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 20],
+	Country_position = [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+	Region_position = [0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+	City_position = [0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
+	Isp_position = [0, 0, 3, 0, 5, 0, 7, 5, 7, 0, 8, 0, 9, 0, 9, 0, 9, 0, 9, 7, 9, 0, 9, 7, 9, 9],
+	Latitude_position = [0, 0, 0, 0, 0, 5, 5, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
+	Longitude_position = [0, 0, 0, 0, 0, 6, 6, 0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6],
+	Domain_position = [0, 0, 0, 0, 0, 0, 0, 6, 8, 0, 9, 0, 10,0, 10, 0, 10, 0, 10, 8, 10, 0, 10, 8, 10, 10],
+	Zipcode_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 7, 7, 7, 0, 7, 7, 7, 0, 7, 0, 7, 7, 7, 0, 7, 7],
+	Timezone_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 8, 7, 8, 8, 8, 7, 8, 0, 8, 8, 8, 0, 8, 8],
+	Netspeed_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 11,0, 11,8, 11, 0, 11, 0, 11, 0, 11, 11],
+	Iddcode_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 12, 0, 12, 0, 12, 9, 12, 0, 12, 12],
+	Areacode_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10 ,13 ,0, 13, 0, 13, 10, 13, 0, 13, 13],
+	Weatherstationcode_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 14, 0, 14, 0, 14, 0, 14, 14],
+	Weatherstationname_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 15, 0, 15, 0, 15, 0, 15, 15],
+	Mcc_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 16, 0, 16, 9, 16, 16],
+	Mnc_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10,17, 0, 17, 10, 17, 17],
+	Mobilebrand_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11,18, 0, 18, 11, 18, 18],
+	Elevation_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 19, 0, 19, 19],
+	Usagetype_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 20, 20],
+	Addresstype_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21],
+	Category_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 22],
 	
-	Cols = ?IF(lists:nth(Dbtype, Country_position) == 0) + ?IF(lists:nth(Dbtype, Region_position) == 0) + ?IF(lists:nth(Dbtype, City_position) == 0) + ?IF(lists:nth(Dbtype, Isp_position) == 0) + ?IF(lists:nth(Dbtype, Latitude_position) == 0) + ?IF(lists:nth(Dbtype, Longitude_position) == 0) + ?IF(lists:nth(Dbtype, Domain_position) == 0) + ?IF(lists:nth(Dbtype, Zipcode_position) == 0) + ?IF(lists:nth(Dbtype, Timezone_position) == 0) + ?IF(lists:nth(Dbtype, Netspeed_position) == 0) + ?IF(lists:nth(Dbtype, Iddcode_position) == 0) + ?IF(lists:nth(Dbtype, Areacode_position) == 0) + ?IF(lists:nth(Dbtype, Weatherstationcode_position) == 0) + ?IF(lists:nth(Dbtype, Weatherstationname_position) == 0) + ?IF(lists:nth(Dbtype, Mcc_position) == 0) + ?IF(lists:nth(Dbtype, Mnc_position) == 0) + ?IF(lists:nth(Dbtype, Mobilebrand_position) == 0) + ?IF(lists:nth(Dbtype, Elevation_position) == 0) + ?IF(lists:nth(Dbtype, Usagetype_position) == 0),
+	Cols = ?IF(lists:nth(Dbtype, Country_position) == 0) + ?IF(lists:nth(Dbtype, Region_position) == 0) + ?IF(lists:nth(Dbtype, City_position) == 0) + ?IF(lists:nth(Dbtype, Isp_position) == 0) + ?IF(lists:nth(Dbtype, Latitude_position) == 0) + ?IF(lists:nth(Dbtype, Longitude_position) == 0) + ?IF(lists:nth(Dbtype, Domain_position) == 0) + ?IF(lists:nth(Dbtype, Zipcode_position) == 0) + ?IF(lists:nth(Dbtype, Timezone_position) == 0) + ?IF(lists:nth(Dbtype, Netspeed_position) == 0) + ?IF(lists:nth(Dbtype, Iddcode_position) == 0) + ?IF(lists:nth(Dbtype, Areacode_position) == 0) + ?IF(lists:nth(Dbtype, Weatherstationcode_position) == 0) + ?IF(lists:nth(Dbtype, Weatherstationname_position) == 0) + ?IF(lists:nth(Dbtype, Mcc_position) == 0) + ?IF(lists:nth(Dbtype, Mnc_position) == 0) + ?IF(lists:nth(Dbtype, Mobilebrand_position) == 0) + ?IF(lists:nth(Dbtype, Elevation_position) == 0) + ?IF(lists:nth(Dbtype, Usagetype_position) == 0) + ?IF(lists:nth(Dbtype, Addresstype_position) == 0) + ?IF(lists:nth(Dbtype, Category_position) == 0),
 	Rowlength = Cols bsl 2,
 	
 	case file:pread(S, Rowoffset - 1, Rowlength) of
@@ -256,26 +211,6 @@ readrecord(S, Dbtype, Rowoffset) ->
 			#ip2locationrecord{};
 		{ok, Data} ->
 			R = Data,
-			
-			% {Country_short, Country_long} = readcolcountry(S, Dbtype, Rowoffset, Country_position),
-			% Region = readcolstring(S, Dbtype, Rowoffset, Region_position),
-			% City = readcolstring(S, Dbtype, Rowoffset, City_position),
-			% Isp = readcolstring(S, Dbtype, Rowoffset, Isp_position),
-			% Latitude = readcolfloat(S, Dbtype, Rowoffset, Latitude_position),
-			% Longitude = readcolfloat(S, Dbtype, Rowoffset, Longitude_position),
-			% Domain = readcolstring(S, Dbtype, Rowoffset, Domain_position),
-			% Zipcode = readcolstring(S, Dbtype, Rowoffset, Zipcode_position),
-			% Timezone = readcolstring(S, Dbtype, Rowoffset, Timezone_position),
-			% Netspeed = readcolstring(S, Dbtype, Rowoffset, Netspeed_position),
-			% Iddcode = readcolstring(S, Dbtype, Rowoffset, Iddcode_position),
-			% Areacode = readcolstring(S, Dbtype, Rowoffset, Areacode_position),
-			% Weatherstationcode = readcolstring(S, Dbtype, Rowoffset, Weatherstationcode_position),
-			% Weatherstationname = readcolstring(S, Dbtype, Rowoffset, Weatherstationname_position),
-			% Mcc = readcolstring(S, Dbtype, Rowoffset, Mcc_position),
-			% Mnc = readcolstring(S, Dbtype, Rowoffset, Mnc_position),
-			% Mobilebrand = readcolstring(S, Dbtype, Rowoffset, Mobilebrand_position),
-			% Elevation = readcolfloatstring(S, Dbtype, Rowoffset, Elevation_position),
-			% Usagetype = readcolstring(S, Dbtype, Rowoffset, Usagetype_position),
 			
 			{Country_short, Country_long} = readcolcountryrow(S, R, Dbtype, Country_position),
 			Region = readcolstringrow(S, R, Dbtype, Region_position),
@@ -296,6 +231,8 @@ readrecord(S, Dbtype, Rowoffset) ->
 			Mobilebrand = readcolstringrow(S, R, Dbtype, Mobilebrand_position),
 			Elevation = readcolfloatstringrow(S, R, Dbtype, Elevation_position),
 			Usagetype = readcolstringrow(S, R, Dbtype, Usagetype_position),
+			Addresstype = readcolstringrow(S, R, Dbtype, Addresstype_position),
+			Category = readcolstringrow(S, R, Dbtype, Category_position),
 			
 			#ip2locationrecord{
 			country_short = Country_short,
@@ -317,7 +254,9 @@ readrecord(S, Dbtype, Rowoffset) ->
 			mnc = Mnc,
 			mobilebrand = Mobilebrand,
 			elevation = Elevation,
-			usagetype = Usagetype
+			usagetype = Usagetype,
+			addresstype = Addresstype,
+			category = Category
 			}
 	end.
 
@@ -341,10 +280,8 @@ searchtree(S, Ipnum, Dbtype, Low, High, BaseAddr, Colsize, Iptype) ->
 				Ipnum >= Ipfrom andalso Ipnum < Ipto ->
 					if
 						Iptype == ipv4 ->
-							% readrecord(S, Dbtype + 1, Rowoffset);
 							readrecord(S, Dbtype + 1, Rowoffset + 4);
 						true ->
-							% readrecord(S, Dbtype + 1, Rowoffset + 12)
 							readrecord(S, Dbtype + 1, Rowoffset + 16)
 					end;
 				true ->
@@ -404,10 +341,6 @@ query(Ip) ->
 			S = input(InputFile),
 			[{_, Databasetype}] = ets:lookup(mymeta, databasetype),
 			[{_, Databasetype}] = ets:lookup(mymeta, databasetype),
-			% [{_, Databasecolumn}] = ets:lookup(mymeta, databasecolumn),
-			% [{_, Databaseyear}] = ets:lookup(mymeta, databaseyear),
-			% [{_, Databasemonth}] = ets:lookup(mymeta, databasemonth),
-			% [{_, Databaseday}] = ets:lookup(mymeta, databaseday),
 			[{_, Ipv4databasecount}] = ets:lookup(mymeta, ipv4databasecount),
 			[{_, Ipv4databaseaddr}] = ets:lookup(mymeta, ipv4databaseaddr),
 			[{_, Ipv6databasecount}] = ets:lookup(mymeta, ipv6databasecount),

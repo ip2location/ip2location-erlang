@@ -5,7 +5,7 @@ printme(V) ->
 	case V of
 		{} ->
 			io:format("No results.~n", []);
-		{ip2locationrecord, Country_short, Country_long, Region, City, Isp, Latitude, Longitude, Domain, Zipcode, Timezone, Netspeed, Iddcode, Areacode, Weatherstationcode, Weatherstationname, Mcc, Mnc, Mobilebrand, Elevation, Usagetype} ->
+		{ip2locationrecord, Country_short, Country_long, Region, City, Isp, Latitude, Longitude, Domain, Zipcode, Timezone, Netspeed, Iddcode, Areacode, Weatherstationcode, Weatherstationname, Mcc, Mnc, Mobilebrand, Elevation, Usagetype, Addresstype, Category} ->
 			io:format("Country_short: ~p~n", [Country_short]),
 			io:format("Country_long: ~p~n", [Country_long]),
 			io:format("Region: ~p~n", [Region]),
@@ -25,12 +25,14 @@ printme(V) ->
 			io:format("Mnc: ~p~n", [Mnc]),
 			io:format("Mobilebrand: ~p~n", [Mobilebrand]),
 			io:format("Elevation: ~p~n", [Elevation]),
-			io:format("Usagetype: ~p~n", [Usagetype])
+			io:format("Usagetype: ~p~n", [Usagetype]),
+			io:format("Addresstype: ~p~n", [Addresstype]),
+			io:format("Category: ~p~n", [Category])
 	end,
 	io:format("===================================================================~n", []).
 
 testme() ->
-	ip2location:new("IPV6-COUNTRY-REGION-CITY-LATITUDE-LONGITUDE-ZIPCODE-TIMEZONE-ISP-DOMAIN-NETSPEED-AREACODE-WEATHER-MOBILE-ELEVATION-USAGETYPE.BIN"),
+	ip2location:new("IPV6-COUNTRY-REGION-CITY-LATITUDE-LONGITUDE-ZIPCODE-TIMEZONE-ISP-DOMAIN-NETSPEED-AREACODE-WEATHER-MOBILE-ELEVATION-USAGETYPE-ADDRESSTYPE-CATEGORY.BIN"),
 	ip2location:getapiversion(),
 	V1 = ip2location:query("8.8.8.8"),
 	printme(V1),
