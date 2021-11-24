@@ -1,5 +1,5 @@
 -module(test).
--export([testme/0]).
+-export([testme/0, testme2/0]).
 
 printme(V) ->
 	case V of
