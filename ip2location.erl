@@ -1,5 +1,5 @@
 -module(ip2location).
--export([apiversion/0, getapiversion/0, new/1, query/1, close/0]).
+-export([apiversion/0, getapiversion/0, new/1, query/1, close/0, openws/3, lookup/3, getcredit/0]).
 -record(ip2locationrecord, {
 	country_short = "-",
 	country_long = "-",
@@ -27,7 +27,7 @@
 -define(IF(Cond), (case (Cond) of true -> (0); false -> (1) end)).
 
 apiversion() ->
-	"8.3.0".
+	"8.4.0".
 
 getapiversion() ->
 	io:format("API Version: ~p~n", [apiversion()]).
@@ -381,4 +381,137 @@ close() ->
 		ok; % do nothing
 	_ ->
 		ets:delete(mymeta)
+	end.
+
+closews() ->
+	case ets:info(myws) of
+		undefined ->
+			ok;
+		_ ->
+			ets:delete(myws),
+			ok
+	end.
+
+configurews(APIKey, APIPackage, UseSSL) ->
+	_ = closews(),
+	
+	case ets:info(myws) of
+		undefined ->
+			ets:new(myws, [set, named_table]),
+			ets:insert(myws, {apikey, APIKey}),
+			ets:insert(myws, {apipackage, APIPackage}),
+			ets:insert(myws, {usessl, UseSSL}),
+			ok;
+		_ ->
+			ok
+	end.
+
+checkparams(APIKey, APIPackage) ->
+	RegExp = "^[\\dA-Z]{10}$",
+	RegExp2 = "^WS\\d+$",
+	case re:run(APIKey, RegExp) of
+		{match, _} ->
+			case re:run(APIPackage, RegExp2) of
+				nomatch ->
+					io:format("Invalid package name.~n", []),
+					halt();
+				{match, _} ->
+					ok % do nothing
+			end;
+		nomatch ->
+			io:format("Invalid API key.~n", []),
+			halt()
+	end.
+
+openws(APIKey, APIPackage, UseSSL) ->
+	case checkparams(APIKey, APIPackage) of
+		ok ->
+			case UseSSL of
+				false ->
+					configurews(APIKey, APIPackage, UseSSL);
+				_ ->
+					configurews(APIKey, APIPackage, true)
+			end;
+		_ ->
+			-1 % should have been halted in checkparams
+	end.
+
+lookup(IPAddress, AddOn, Lang) ->
+	ssl:start(),
+	inets:start(),
+	
+	case ets:info(myws) of
+		undefined ->
+			io:format("Run openws first.~n", []),
+			halt();
+		_ ->
+			case ets:lookup(myws, apikey) of
+				[] ->
+					io:format("Run openws first.~n", []),
+					halt();
+				[{_, APIKey}] ->
+					case ets:lookup(myws, apipackage) of
+						[] ->
+							io:format("Run openws first.~n", []),
+							halt();
+						[{_, APIPackage}] ->
+							case ets:lookup(myws, usessl) of
+								[] ->
+									io:format("Run openws first.~n", []),
+									halt();
+								[{_, UseSSL}] ->
+									case UseSSL of
+										true ->
+											Protocol = "https";
+										_ ->
+											Protocol = "http"
+									end,
+									MyParams = uri_string:compose_query([{"key", APIKey}, {"package", APIPackage}, {"ip", IPAddress}, {"addon", AddOn}, {"lang", Lang}]),
+									
+									case httpc:request(get, {Protocol ++ "://api.ip2location.com/v2/?" ++ MyParams, []}, [{ssl, [{versions, ['tlsv1.2']}]}, {autoredirect, false}], []) of
+										{ok, {{_, 200, _}, _, Body}} ->
+											jiffy:decode(unicode:characters_to_binary(Body,unicode,utf8),[return_maps]);
+										{error, Reason} ->
+											{error, Reason}
+									end
+							end
+					end
+			end
+	end.
+
+getcredit() ->
+	ssl:start(),
+	inets:start(),
+	
+	case ets:info(myws) of
+		undefined ->
+			io:format("Run openws first.~n", []),
+			halt();
+		_ ->
+			case ets:lookup(myws, apikey) of
+				[] ->
+					io:format("Run openws first.~n", []),
+					halt();
+				[{_, APIKey}] ->
+					case ets:lookup(myws, usessl) of
+						[] ->
+							io:format("Run openws first.~n", []),
+							halt();
+						[{_, UseSSL}] ->
+							case UseSSL of
+								true ->
+									Protocol = "https";
+								_ ->
+									Protocol = "http"
+							end,
+							MyParams = uri_string:compose_query([{"key", APIKey}, {"check", "true"}]),
+							
+							case httpc:request(get, {Protocol ++ "://api.ip2location.com/v2/?" ++ MyParams, []}, [{ssl, [{versions, ['tlsv1.2']}]}, {autoredirect, false}], []) of
+								{ok, {{_, 200, _}, _, Body}} ->
+									jiffy:decode(unicode:characters_to_binary(Body,unicode,utf8),[return_maps]);
+								{error, Reason} ->
+									{error, Reason}
+							end
+					end
+			end
 	end.
