@@ -35,8 +35,7 @@ defmodule IP2LocationErlang.MixProject do
       # This option is only needed when you don't want to use the OTP application name
       name: "ip2location-erlang",
       # These are the default files included in the package
-      files: ~w(mix.exs README* readme* LICENSE*
-                license* *.erl),
+      files: ~w(mix.exs README* LICENSE* *.erl),
       licenses: ["MIT"],
       links: %{"GitHub" => "https://github.com/ip2location/ip2location-erlang"}
     ]
