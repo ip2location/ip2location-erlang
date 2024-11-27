@@ -27,7 +27,7 @@ defmodule IP2LocationErlang.MixProject do
   end
 
   defp description() do
-    "This Erlang module provides a fast lookup of country, region, city, latitude, longitude, ZIP code, time zone, ISP, domain name, connection type, IDD code, area code, weather station code, station name, mcc, mnc, mobile brand, elevation, usage type, address type, IAB category, district, autonomous system number (ASN) and autonomous system (AS) from IP address by using IP2Location database."
+    "Query country, region, city, latitude, longitude, ZIP code, time zone, ISP, domain, connection type, IDD, area code, weather station, mcc, mnc, mobile brand, elevation, usage type, address type, IAB category, district, (ASN) and (AS) from IP address by using IP2Location database."
   end
 
   defp package() do
