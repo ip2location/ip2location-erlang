@@ -30,7 +30,7 @@
 -define(IF(Cond), (case (Cond) of true -> (0); false -> (1) end)).
 
 apiversion() ->
-	"8.6.0".
+	"8.6.1".
 
 getapiversion() ->
 	io:format("API Version: ~p~n", [apiversion()]).
