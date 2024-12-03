@@ -30,7 +30,7 @@
 -define(IF(Cond), (case (Cond) of true -> (0); false -> (1) end)).
 
 apiversion() ->
-	"8.6.2".
+	"8.6.3".
 
 getapiversion() ->
 	io:format("API Version: ~p~n", [apiversion()]).
@@ -303,8 +303,14 @@ searchtree(S, Ipnum, Dbtype, Low, High, BaseAddr, Colsize, Iptype) ->
 
 search4(S, Ipnum, Dbtype, Low, High, Baseaddr, Indexbaseaddr, Colsize) ->
 	if
+		Ipnum == 4294967295 ->
+			Ipnum2 = Ipnum - 1;
+		true ->
+			Ipnum2 = Ipnum
+	end,
+	if
 		Indexbaseaddr > 0 ->
-			Indexpos = ((Ipnum bsr 16) bsl 3) + Indexbaseaddr,
+			Indexpos = ((Ipnum2 bsr 16) bsl 3) + Indexbaseaddr,
 			case file:pread(S, Indexpos - 1, 8) of % 4 bytes for each IP From & IP To
 			eof ->
 				io:format("Error: IP address not found.~n", []),
@@ -312,16 +318,22 @@ search4(S, Ipnum, Dbtype, Low, High, Baseaddr, Indexbaseaddr, Colsize) ->
 			{ok, R} ->
 				Low2 = readuint32row(R, 0),
 				High2 = readuint32row(R, 4),
-				searchtree(S, Ipnum, Dbtype, Low2, High2, Baseaddr, Colsize, ipv4)
+				searchtree(S, Ipnum2, Dbtype, Low2, High2, Baseaddr, Colsize, ipv4)
 			end;
 		true ->
-			searchtree(S, Ipnum, Dbtype, Low, High, Baseaddr, Colsize, ipv4)
+			searchtree(S, Ipnum2, Dbtype, Low, High, Baseaddr, Colsize, ipv4)
 	end.
 
 search6(S, Ipnum, Dbtype, Low, High, Baseaddr, Indexbaseaddr, Colsize) ->
 	if
+		Ipnum == 340282366920938463463374607431768211455 ->
+			Ipnum2 = Ipnum - 1;
+		true ->
+			Ipnum2 = Ipnum
+	end,
+	if
 		Indexbaseaddr > 0 ->
-			Indexpos = ((Ipnum bsr 112) bsl 3) + Indexbaseaddr,
+			Indexpos = ((Ipnum2 bsr 112) bsl 3) + Indexbaseaddr,
 			case file:pread(S, Indexpos - 1, 8) of % 4 bytes for each IP From & IP To
 			eof ->
 				io:format("Error: IP address not found.~n", []),
@@ -329,10 +341,10 @@ search6(S, Ipnum, Dbtype, Low, High, Baseaddr, Indexbaseaddr, Colsize) ->
 			{ok, R} ->
 				Low2 = readuint32row(R, 0),
 				High2 = readuint32row(R, 4),
-				searchtree(S, Ipnum, Dbtype, Low2, High2, Baseaddr, Colsize, ipv6)
+				searchtree(S, Ipnum2, Dbtype, Low2, High2, Baseaddr, Colsize, ipv6)
 			end;
 		true ->
-			searchtree(S, Ipnum, Dbtype, Low, High, Baseaddr, Colsize, ipv6)
+			searchtree(S, Ipnum2, Dbtype, Low, High, Baseaddr, Colsize, ipv6)
 	end.
 
 query(Ip) ->
@@ -369,53 +381,20 @@ query(Ip) ->
 			Result = case inet:parse_address(Ip) of
 			{ok, {X1, X2, X3, X4}} ->
 				Ipnum = (X1 bsl 24) + (X2 bsl 16) + (X3 bsl 8) + (X4),
-				if
-					Ipnum == 4294967295 ->
-						Ipnum2 = Ipnum - 1;
-					true ->
-						Ipnum2 = Ipnum
-				end,
-				search4(S, Ipnum2, Databasetype, 0, Ipv4databasecount, Ipv4databaseaddr, Ipv4indexbaseaddr, Ipv4columnsize);
+				search4(S, Ipnum, Databasetype, 0, Ipv4databasecount, Ipv4databaseaddr, Ipv4indexbaseaddr, Ipv4columnsize);
 			{ok, {X1, X2, X3, X4, X5, X6, X7, X8}} ->
 				Ipnum = (X1 bsl 112) + (X2 bsl 96) + (X3 bsl 80) + (X4 bsl 64) + (X5 bsl 48) + (X6 bsl 32) + (X7 bsl 16) + X8,
 				if
 					Ipnum >= Fromv4mapped andalso Ipnum =< Tov4mapped ->
-						Ipnum2 = Ipnum - Fromv4mapped,
-						if
-							Ipnum2 == 4294967295 ->
-								Ipnum3 = Ipnum2 - 1;
-							true ->
-								Ipnum3 = Ipnum2
-						end,
-						search4(S, Ipnum3, Databasetype, 0, Ipv4databasecount, Ipv4databaseaddr, Ipv4indexbaseaddr, Ipv4columnsize);
+						search4(S, (Ipnum - Fromv4mapped), Databasetype, 0, Ipv4databasecount, Ipv4databaseaddr, Ipv4indexbaseaddr, Ipv4columnsize);
 					Ipnum >= From6to4 andalso Ipnum =< To6to4 ->
-						Ipnum2 = (Ipnum bsr 80) band Last32bits,
-						if
-							Ipnum2 == 4294967295 ->
-								Ipnum3 = Ipnum2 - 1;
-							true ->
-								Ipnum3 = Ipnum2
-						end,
-						search4(S, Ipnum3, Databasetype, 0, Ipv4databasecount, Ipv4databaseaddr, Ipv4indexbaseaddr, Ipv4columnsize);
+						search4(S, ((Ipnum bsr 80) band Last32bits), Databasetype, 0, Ipv4databasecount, Ipv4databaseaddr, Ipv4indexbaseaddr, Ipv4columnsize);
 					Ipnum >= Fromteredo andalso Ipnum =< Toteredo ->
-						Ipnum2 = (bnot Ipnum) band Last32bits,
-						if
-							Ipnum2 == 4294967295 ->
-								Ipnum3 = Ipnum2 - 1;
-							true ->
-								Ipnum3 = Ipnum2
-						end,
-						search4(S, Ipnum3, Databasetype, 0, Ipv4databasecount, Ipv4databaseaddr, Ipv4indexbaseaddr, Ipv4columnsize);
+						search4(S, ((bnot Ipnum) band Last32bits), Databasetype, 0, Ipv4databasecount, Ipv4databaseaddr, Ipv4indexbaseaddr, Ipv4columnsize);
 					true ->
 						if
 							Ipv6databasecount > 0 ->
-								if
-									Ipnum == 340282366920938463463374607431768211455 ->
-										Ipnum2 = Ipnum - 1;
-									true ->
-										Ipnum2 = Ipnum
-								end,
-								search6(S, Ipnum2, Databasetype, 0, Ipv6databasecount, Ipv6databaseaddr, Ipv6indexbaseaddr, Ipv6columnsize);
+								search6(S, Ipnum, Databasetype, 0, Ipv6databasecount, Ipv6databaseaddr, Ipv6indexbaseaddr, Ipv6columnsize);
 							true ->
 								io:format("Error: IPv6 address is missing in IPv4 BIN.~n", []),
 								{} % return empty
