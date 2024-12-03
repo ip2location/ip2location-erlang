@@ -4,7 +4,7 @@ defmodule IP2LocationErlang.MixProject do
   def project() do
     [
       app: :ip2location_erlang,
-      version: "8.6.1",
+      version: "8.6.2",
       elixir: "~> 1.0",
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
