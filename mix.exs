@@ -24,7 +24,7 @@ defmodule IP2LocationErlang.MixProject do
 
   defp deps() do
     [
-      {:jiffy, "~> 1.1"},
+      {:jiffy, "~> 1.1", compile: false},
       {:ex_doc, "~> 0.14", only: :dev, runtime: false}
     ]
   end
