@@ -6,11 +6,11 @@
 # -- Project information
 
 project = 'IP2Location Erlang'
-copyright = '2024, IP2Location'
+copyright = '2025, IP2Location'
 author = 'IP2Location'
 
-release = '1.0.0'
-version = '1.0.0'
+release = '8.6.4'
+version = '8.6.4'
 
 # -- General configuration
 
@@ -61,4 +61,4 @@ html_favicon = 'images/favicon.ico'
 
 html_title = "IP2Location Erlang"
 
-# html_baseurl = "https://ip2location-d.readthedocs.io/en/latest/"
+# html_baseurl = "https://ip2location-erlang.readthedocs.io/en/latest/"
