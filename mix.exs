@@ -7,7 +7,6 @@ defmodule IP2LocationErlang.MixProject do
       version: "8.6.4",
       elixir: "~> 1.0",
       erlc_paths: ["."],
-      compilers: [:leex, :yecc] ++ Mix.compilers(),
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
       description: description(),
@@ -24,7 +23,7 @@ defmodule IP2LocationErlang.MixProject do
 
   defp deps() do
     [
-      {:jiffy, "~> 1.1", compile: false},
+      {:jiffy, "~> 1.1"},
       {:ex_doc, "~> 0.14", only: :dev, runtime: false}
     ]
   end
