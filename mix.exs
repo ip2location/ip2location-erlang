@@ -29,7 +29,7 @@ defmodule IP2LocationErlang.MixProject do
   end
 
   defp description() do
-    "Query country, region, city, latitude, longitude, ZIP code, time zone, ISP, domain, connection type, IDD, area code, weather station, mcc, mnc, mobile brand, elevation, usage type, address type, IAB category, district, (ASN), (AS), AS domain, AS usage type and AS CIDR from IP address by using IP2Location database."
+    "Query country, region, city, latitude, longitude, ZIP code, time zone, ISP, domain, connection type, IDD, area code, weather station, mcc, mnc, mobile brand, elevation, usage type, address type, IAB category, district and ASN info from IP address by using IP2Location database."
   end
 
   defp package() do
