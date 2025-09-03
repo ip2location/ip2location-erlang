@@ -9,8 +9,8 @@ project = 'IP2Location Erlang'
 copyright = '2025, IP2Location'
 author = 'IP2Location'
 
-release = '8.6.4'
-version = '8.6.4'
+release = '8.7.0'
+version = '8.7.0'
 
 # -- General configuration
 

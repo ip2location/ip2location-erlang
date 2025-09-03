@@ -4,7 +4,7 @@ defmodule IP2LocationErlang.MixProject do
   def project() do
     [
       app: :ip2location_erlang,
-      version: "8.6.4",
+      version: "8.7.0",
       elixir: "~> 1.0",
       erlc_paths: ["."],
       build_embedded: Mix.env == :prod,
@@ -29,7 +29,7 @@ defmodule IP2LocationErlang.MixProject do
   end
 
   defp description() do
-    "Query country, region, city, latitude, longitude, ZIP code, time zone, ISP, domain, connection type, IDD, area code, weather station, mcc, mnc, mobile brand, elevation, usage type, address type, IAB category, district, (ASN) and (AS) from IP address by using IP2Location database."
+    "Query country, region, city, latitude, longitude, ZIP code, time zone, ISP, domain, connection type, IDD, area code, weather station, mcc, mnc, mobile brand, elevation, usage type, address type, IAB category, district, (ASN), (AS), AS domain, AS usage type and AS CIDR from IP address by using IP2Location database."
   end
 
   defp package() do

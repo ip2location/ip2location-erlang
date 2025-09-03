@@ -25,12 +25,15 @@
 	category = "-",
 	district = "-",
 	asn = "-",
-	as = "-"
+	as = "-",
+	asdomain = "-",
+	asusagetype = "-",
+	ascidr = "-"
 }).
 -define(IF(Cond), (case (Cond) of true -> (0); false -> (1) end)).
 
 apiversion() ->
-	"8.6.4".
+	"8.7.0".
 
 getapiversion() ->
 	io:format("API Version: ~p~n", [apiversion()]).
@@ -199,6 +202,9 @@ readrecord(S, R, Dbtype) ->
 	District_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 23],
 	Asn_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24],
 	As_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 25],
+	Asdomain_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 26],
+	Asusagetype_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27],
+	Ascidr_position = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 28],
 	
 	{Country_short, Country_long} = readcolcountryrow(S, R, Dbtype, Country_position),
 	Region = readcolstringrow(S, R, Dbtype, Region_position),
@@ -224,6 +230,9 @@ readrecord(S, R, Dbtype) ->
 	District = readcolstringrow(S, R, Dbtype, District_position),
 	Asn = readcolstringrow(S, R, Dbtype, Asn_position),
 	As = readcolstringrow(S, R, Dbtype, As_position),
+	Asdomain = readcolstringrow(S, R, Dbtype, Asdomain_position),
+	Asusagetype = readcolstringrow(S, R, Dbtype, Asusagetype_position),
+	Ascidr = readcolstringrow(S, R, Dbtype, Ascidr_position),
 	
 	#ip2locationrecord{
 	country_short = Country_short,
@@ -250,7 +259,10 @@ readrecord(S, R, Dbtype) ->
 	category = Category,
 	district = District,
 	asn = Asn,
-	as = As
+	as = As,
+	asdomain = Asdomain,
+	asusagetype = Asusagetype,
+	ascidr = Ascidr
 	}.
 
 searchtree(S, Ipnum, Dbtype, Low, High, BaseAddr, Colsize, Iptype) ->

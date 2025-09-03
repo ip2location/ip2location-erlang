@@ -5,7 +5,7 @@ printme(V) ->
 	case V of
 		{} ->
 			io:format("No results.~n", []);
-		{ip2locationrecord, Country_short, Country_long, Region, City, Isp, Latitude, Longitude, Domain, Zipcode, Timezone, Netspeed, Iddcode, Areacode, Weatherstationcode, Weatherstationname, Mcc, Mnc, Mobilebrand, Elevation, Usagetype, Addresstype, Category, District, Asn, As} ->
+		{ip2locationrecord, Country_short, Country_long, Region, City, Isp, Latitude, Longitude, Domain, Zipcode, Timezone, Netspeed, Iddcode, Areacode, Weatherstationcode, Weatherstationname, Mcc, Mnc, Mobilebrand, Elevation, Usagetype, Addresstype, Category, District, Asn, As, Asdomain, Asusagetype, Ascidr} ->
 			io:format("Country_short: ~p~n", [Country_short]),
 			io:format("Country_long: ~p~n", [Country_long]),
 			io:format("Region: ~p~n", [Region]),
@@ -30,7 +30,10 @@ printme(V) ->
 			io:format("Category: ~p~n", [Category]),
 			io:format("District: ~p~n", [District]),
 			io:format("Asn: ~p~n", [Asn]),
-			io:format("As: ~p~n", [As])
+			io:format("As: ~p~n", [As]),
+			io:format("Asdomain: ~p~n", [Asdomain]),
+			io:format("Asusagetype: ~p~n", [Asusagetype]),
+			io:format("Ascidr: ~p~n", [Ascidr])
 	end,
 	io:format("===================================================================~n", []).
 

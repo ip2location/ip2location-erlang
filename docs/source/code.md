@@ -51,4 +51,7 @@ Retrieve geolocation information for an IP address.
 | District         |     District or county name. |
 | Asn              |     Autonomous system number (ASN). BIN databases. |
 | As          |     Autonomous system (AS) name. |
+| Asdomain    | Domain name of the AS registrant. |
+| Asusagetype    | Usage type of the AS registrant. |
+| Ascidr    | CIDR range for the whole AS. |
 ```
